@@ -1,6 +1,7 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage  } from '@inertiajs/react';
+import { useEffect, FormEventHandler } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -9,6 +10,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGoogle } from '@fortawesome/free-brands-svg-icons';
+
+import { ToastContainer, toast, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+// const { flash } = usePage().props as { flash: FlashProps };
+
 
 type LoginForm = {
     email: string;
@@ -20,12 +28,22 @@ interface LoginProps {
     status?: string;
     canResetPassword: boolean;
 }
+interface FlashProps {
+    success?: string;
+    error?: string;
+}
+
+
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+
+    const { flash } = usePage<{ flash: FlashProps }>().props;
+
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
         password: '',
         remember: false,
+
     });
 
     const submit: FormEventHandler = (e) => {
@@ -38,6 +56,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     const handleGoogleLogin = () => {
         window.location.href = '/auth/google'; // Redirect ke route Laravel
     };
+
+    useEffect(() => {
+        if (flash?.success) toast.success(flash.success);
+        if (flash?.error) toast.error(flash.error);
+    }, [flash]);
+
 
 
     return (
@@ -99,9 +123,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Log in
                     </Button>
+                <p className='text-center -mt-5 text-gray-400 text-700'>---------------  or  --------------</p>
                 </div>
-                <div>
-                <button onClick={handleGoogleLogin}>Login with Google</button>
+                <div className='-mt-7'>
+                    <Button className="mt-4 w-full  bg-transparent text-black border-1 border-black" onClick={handleGoogleLogin}>Login with Google <FontAwesomeIcon className='ms-0.2' icon={faGoogle} /></Button>
                     {/* <TextLink href={route('login.google')} tabIndex={5}>
                         Login with Google
                     </TextLink> */}
@@ -117,6 +142,19 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             </form>
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+
+            <ToastContainer
+                position="top-center"
+                autoClose={5000}
+                hideProgressBar={true}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                transition={Slide}
+            />
         </AuthLayout>
     );
 }

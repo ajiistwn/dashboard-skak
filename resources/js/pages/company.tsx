@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { usePage } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -12,30 +13,38 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-interface TeamMemberProps {
+interface TeamMemberUIProps {
     image: string;
     name: string;
-    role: string;
+    job_title: string;
 }
 
-const TeamMember = ({ image, name, role }: TeamMemberProps) => {
+interface TeamMemberData {
+    id: number;
+    image: string | null;
+    name: string;
+    job_title: string;
+}
+const TeamMember = ({ image, name, job_title }: TeamMemberUIProps) => {
     return (
         <Card className="w-54 md:w-64 flex-shrink-0">
             <CardHeader className='flex flex-col items-center'>
-                <Avatar className="mb-4 w-28 h-28 md:w-32 md:h-32">
-                    <AvatarImage src={image}  />
+                <Avatar className="mb-4 w-28 h-28 md:w-32 md:h-32 overflow-hidden">
+                    <AvatarImage src={image} className="object-cover w-full h-full rounded-full" />
                     <AvatarFallback>CN</AvatarFallback>
                 </Avatar>
             </CardHeader>
             <CardContent>
-                <CardTitle className='className="text-2xl md:text-xl mb-2 text-center'>{name}</CardTitle>
-                <CardDescription className="text-l md:text-lg text-center">{role}</CardDescription>
+                <CardTitle className='text-2xl md:text-xl mb-2 text-center'>{name}</CardTitle>
+                <CardDescription className="text-l md:text-lg text-center">{job_title}</CardDescription>
             </CardContent>
         </Card>
     );
 };
 
 export default function Company() {
+
+    const { team } = usePage<{ team: TeamMemberData[] }>().props;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -74,26 +83,14 @@ export default function Company() {
             <section className='p-6  rounded-lg'>
                 <h2 className="text-xl font-bold mb-2">Company Structure</h2>
                 <div className="flex overflow-x-auto space-x-4 mt-4">
-                    <TeamMember
-                    image="https://picsum.photos/200/200?random=1"
-                    name="Ricky Ramadhan Setiyawan"
-                    role="Co-Founder & CEO"
-                    />
-                    <TeamMember
-                    image="https://picsum.photos/200/200?random=2"
-                    name="Bayu Eko Moektito"
-                    role="Founder"
-                    />
-                    <TeamMember
-                    image="https://picsum.photos/200/200?random=3"
-                    name="Henry Myranda"
-                    role="Co-Founder & Business Operational"
-                    />
-                    <TeamMember
-                    image="https://picsum.photos/200/200?random=4"
-                    name="Achmad Rofiq"
-                    role="Co-Founder & Head IP Dev"
-                    />
+                    {team.map((member: TeamMemberData) => (
+                        <TeamMember
+                            key={member.id}
+                            image={member.image || ''}
+                            name={member.name}
+                            job_title={member.job_title || ''}
+                        />
+                    ))}
                 </div>
                 <div className="flex justify-end mt-4">
                     <a href="#" className="text-blue-500 hover:text-blue-700">

@@ -20,12 +20,13 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('job_title')->nullable();
             $table->enum('access', ['admin', 'bod', 'team', 'intern', 'crew', 'partner', 'investor'])->default('team');
+            $table->enum('status', ['employee'])->default('employee');
             $table->string('image')->nullable();
-            $table->string('google_id')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+            // $table->string('google_id')->nullable();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

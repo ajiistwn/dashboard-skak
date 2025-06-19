@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\GoogleAuthController;
-
+use App\Http\Controllers\Dashboard\CompanyController;
 
 
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return Inertia::render('auth/login');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -15,18 +15,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
-    Route::get('company', function () {
-        return Inertia::render('company');
-    })->name('company');
+
+    Route::get('/company', [CompanyController::class, 'index'])->name('company');
+
+    Route::get('employee', function () {
+        return Inertia::render('employee');
+    })->name('employee');
 });
-
-
-// Route::get('/auth/google/redirect', function (Request $request) {
-//     return Socialite::driver('google')->redirect();
-// });
-// Route::get('/auth/google/callback', function (Request $request) {
-//     dd($request->all());
-// });
 
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('login.google');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleCallback']);
