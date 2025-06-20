@@ -6,6 +6,11 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Filter } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
+
+// import { Icon } from '@/components/icon';
+
 
 interface TeamMemberProps {
     employee: {
@@ -24,6 +29,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Employee() {
+    
+    const { auth } = usePage().props;
+    const currentUser = auth.user;
     const employeesBoard = [
         {
             id: 1,
@@ -84,24 +92,26 @@ export default function Employee() {
 
             <div className="p-4">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-4">
-                    <Button variant="outline" className="bg-purple-600 text-white">
-                        <span className="mr-2">+</span>
-                        Add Employee
+                <div className="flex flex-col mb-4">
+                {currentUser?.access === 'bod' && (
+                    <Button variant="outline" className="bg-purple-600 text-white w-[30%] py-2 px-2 mb-3">
+                        + Add Employee
                     </Button>
-                    <div className="flex gap-4">
-                        <Input placeholder="Search" />
-                        <Select>
-                            <SelectTrigger>
-                                <SelectValue>Filter</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="option-1">Option 1</SelectItem>
-                                <SelectItem value="option-2">Option 2</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                )}
+
+                <div className="flex gap-2">
+                    <Input placeholder="Search" />
+                    <Select>
+                        <SelectTrigger className='w-[20%]'>
+                            <SelectValue><Filter /> Filter</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="option-1">Option 1</SelectItem>
+                            <SelectItem value="option-2">Option 2</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
+            </div>
 
                 {/* Board of Director */}
                 <div className="mb-4">

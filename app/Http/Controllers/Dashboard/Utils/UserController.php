@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Dashboard\Utils;
 
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Controller;
 
 class UserController extends Controller
 {
@@ -31,6 +32,21 @@ class UserController extends Controller
             ->get();
 
         return response()->json($users);
+    }
+
+    public function show($id)
+    {
+        try {
+            $user = User::select([
+                    'id', 'name', 'full_name', 'email', 'phone', 'address',
+                    'job_title', 'access', 'status', 'image', 'email_verified_at', 'created_at', 'updated_at'
+                ])
+                ->findOrFail($id);
+
+            return response()->json($user);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
     }
 
     // Tambah user baru
