@@ -14,10 +14,10 @@ return new class extends Migration
             Schema::create('projects', function (Blueprint $table) {
                 $table->id();
                 $table->string('name'); // Nama proyek
-                $table->foreignId('format_project_id')->constrained('format_projects'); // Relasi ke tabel formats
+                $table->foreignId('format_project_id')->nullable()->constrained('format_projects')->nullOnDelete(); // Relasi ke tabel formats
                 $table->text('synopsis')->nullable(); // Sinopsis proyek
                 $table->string('image')->nullable(); // URL gambar header
-                $table->foreignId('status_project_id')->constrained('status_projects'); // Relasi ke tabel statuses
+                $table->foreignId('status_project_id')->nullable()->constrained('status_projects')->nullOnDelete(); // Relasi ke tabel statuses
                 $table->string('target_date')->nullable(); // Target date
                 $table->integer('development')->nullable(); // Progress development
                 $table->integer('pre_production')->nullable(); // Progress pre-production
