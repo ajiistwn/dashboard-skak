@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('full_name')->nullable();
             $table->string('email')->unique();
             $table->string('phone')->nullable();
+            $table->enum('gender', ['male', 'female']);
             $table->text('address')->nullable();
             $table->string('job_title')->nullable();
             $table->enum('access', ['admin', 'bod', 'team', 'intern', 'crew', 'partner', 'investor'])->default('team');
