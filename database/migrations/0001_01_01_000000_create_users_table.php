@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('job_title')->nullable();
             $table->enum('access', ['admin', 'bod', 'team', 'intern', 'crew', 'partner', 'investor'])->default('team');
-            $table->enum('status', ['employee'])->default('employee');
+            $table->enum('status', ['employee', null])->default('employee');
             $table->string('image')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

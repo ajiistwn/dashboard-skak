@@ -48,6 +48,7 @@ createInertiaApp({
                     rtl={false}
                     pauseOnFocusLoss
                     draggable
+                    // theme="colored"
                     pauseOnHover
                     transition={Slide}
                 />

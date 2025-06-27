@@ -25,6 +25,9 @@ class DatabaseSeeder extends Seeder
             FormatsProjectSeeder::class,
             StatusesProjectSeeder::class,
             ProjectSeeder::class,
+            CategoryDocumentSeeder::class,
+            FileAndDataSeeder::class,
+            AgendaSeeder::class,
             // Add other seeders here
         ]);
     }

@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class FormatProject extends Model
+class Agenda extends Model
 {
     //
-    protected $table = 'format_projects';
+    protected $table = 'agendas';
+
     protected $guarded = [];
+
 }

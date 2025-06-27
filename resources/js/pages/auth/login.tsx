@@ -126,7 +126,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 <p className='text-center -mt-5 text-gray-400 text-700'>---------------  or  --------------</p>
                 </div>
                 <div className='-mt-7'>
-                    <Button className="mt-4 w-full  bg-transparent text-black border-1 border-black" onClick={handleGoogleLogin}>Login with Google <FontAwesomeIcon className='ms-0.2' icon={faGoogle} /></Button>
+                    <Button className="mt-4 w-full  bg-transparent text-black border-1 border-black hover:bg-gray-200" onClick={handleGoogleLogin}>Login with Google <FontAwesomeIcon className='ms-0.2' icon={faGoogle} /></Button>
                     {/* <TextLink href={route('login.google')} tabIndex={5}>
                         Login with Google
                     </TextLink> */}
