@@ -33,7 +33,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('company', absolute: false))->with('success', 'Berhasil login dengan Google!');
+        return redirect()->intended(route('company', absolute: false))->with('success', 'Berhasil login!');
     }
 
     /**

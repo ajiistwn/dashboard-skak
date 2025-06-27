@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             CategoryDocumentSeeder::class,
             FileAndDataSeeder::class,
             AgendaSeeder::class,
+            CrewAndCastSeeder::class,
             // Add other seeders here
         ]);
     }

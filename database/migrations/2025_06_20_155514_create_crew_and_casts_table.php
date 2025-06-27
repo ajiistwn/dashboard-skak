@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
             $table->string('nick_name'); // Nama panggilan
             $table->string('full_name')->nullable(); // Nama lengkap
-            $table->string('jobdesc'); // Deskripsi pekerjaan
+            $table->string('job_title'); // Deskripsi pekerjaan
             $table->string('image')->nullable(); // URL foto profil
             $table->date('date_birth')->nullable(); // Tanggal lahir
             $table->string('address')->nullable(); // Alamat
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('email')->nullable(); // Email
             $table->string('phone')->nullable(); // Nomor telepon
             $table->string('character_name')->nullable(); // Nama karakter (hanya untuk Cast)
-            $table->text('description')->nullable(); // Media sosial
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
