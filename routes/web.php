@@ -48,7 +48,12 @@ Route::get('/users/{id}', [UserController::class, 'show'])->name('users.show');
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('login.google');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'handleCallback']);
 
+// Route::get('/test', function () {
+//     return response()->json(['message' => 'tes berhasil']);
+// });
+
 
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+// require __DIR__.'/api.php';
