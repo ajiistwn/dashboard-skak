@@ -8,7 +8,9 @@ class CrewAndCast extends Model
 {
     //
     protected $table = 'crew_and_casts';
+
     protected $guarded = [];
+
 
     public function project()
     {

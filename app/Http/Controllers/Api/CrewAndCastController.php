@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Models\Project;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log; // For logging
 use Illuminate\Support\Facades\Storage; // For file storage
 use App\Models\CrewAndCast; // Assuming you have a CrewAndCast model
 
@@ -77,7 +79,6 @@ class CrewAndCastController extends Controller
      */
     public function store(Request $request)
     {
-        // ... validasi dan lainnya ...
         // Validasi input
         $validated = $request->validate([
             'project_id' => 'nullable|exists:projects,id',
@@ -99,20 +100,17 @@ class CrewAndCastController extends Controller
         if ($request->hasFile('image')) {
             $file = $request->file('image');
 
-            // Buat nama file (seperti yang sudah kita buat)
-            $projectSlug = '';
-            if ($request->filled('project_id')) {
-                $project = Project::find((int) $request->project_id);
-                if ($project) {
-                    $projectSlug = Str::slug($project->name, '-') . '_';
-                }
-            }
+            // Buat nama file dengan format nick_name_timestamp_hash.extension
+            $nickNameSlug = Str::slug($validated['nick_name'], '-'); // Slugify nick_name
+            $timestamp = time(); // Waktu saat ini
+            $hash = substr(md5($file->getClientOriginalName()), 0, 6); // Hash pendek dari nama file asli
+            $extension = $file->getClientOriginalExtension(); // Ekstensi file
 
-            $nickNameSlug = Str::slug($validated['nick_name'], '-');
-            $fileName = $projectSlug . $nickNameSlug . '_' . time() . '.' . $file->getClientOriginalExtension();
+            // Gabungkan semua komponen untuk membuat nama file
+            $fileName = "{$nickNameSlug}_{$timestamp}_{$hash}.{$extension}";
 
             // Path folder dan file
-            $folderPath = 'uploads/crew_and_cast'; // Hanya nama folder
+            $folderPath = 'uploads/crew_and_cast'; // Nama folder di storage
             $filePath = $folderPath . '/' . $fileName;
 
             // Pastikan folder ada, jika tidak, buat otomatis
@@ -120,7 +118,7 @@ class CrewAndCastController extends Controller
                 Storage::disk('public')->makeDirectory($folderPath);
             }
 
-            // Simpan file
+            // Simpan file ke storage
             Storage::disk('public')->put($filePath, file_get_contents($file));
 
             // URL absolut
@@ -133,7 +131,7 @@ class CrewAndCastController extends Controller
         // Simpan ke database
         $crewAndCast = CrewAndCast::create($validated);
 
-        return response()->json($crewAndCast, 201);
+        return response()->json($crewAndCast);
     }
 
     /**
@@ -141,27 +139,77 @@ class CrewAndCastController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        // Validasi input
         $validated = $request->validate([
             'project_id' => 'nullable|exists:projects,id',
-            'nick_name' => 'sometimes|required|string|max:255',
+            'nick_name' => 'nullable|string|max:255',
             'full_name' => 'nullable|string|max:255',
-            'job_title' => 'sometimes|required|string|max:255',
-            'image' => 'nullable|string',
+            'job_title' => 'nullable|string|max:255',
+            'image' => 'nullable',
             'date_birth' => 'nullable|date',
             'address' => 'nullable|string',
             'home_town' => 'nullable|string',
             'group' => 'nullable|string',
-            'category' => 'sometimes|required|in:crew,cast',
+            'category' => 'nullable|in:crew,cast',
             'email' => 'nullable|email',
             'phone' => 'nullable|string',
             'character_name' => 'nullable|string',
             'description' => 'nullable|string',
         ]);
+
+        // Temukan entitas CrewAndCast berdasarkan ID
         $crewAndCast = CrewAndCast::findOrFail($id);
 
+        // Cek apakah ada file gambar baru
+        if ($request->hasFile('image')) {
+            // Jika ada file gambar baru, simpan gambar baru dan hapus gambar lama
+            if ($crewAndCast->image) {
+                $relativePath = $this->extractRelativePathFromUrl($crewAndCast->image);
+                Storage::disk('public')->delete($relativePath);
+            }
+
+            // Simpan file gambar baru ke storage
+            $file = $request->file('image');
+            $nickNameSlug = Str::slug($request->input('nick_name', $crewAndCast->nick_name), '-'); // Slugify nick_name
+            $timestamp = time(); // Waktu saat ini
+            $hash = substr(md5($file->getClientOriginalName()), 0, 6); // Hash pendek dari nama file asli
+            $extension = $file->getClientOriginalExtension(); // Ekstensi file
+            $fileName = "{$nickNameSlug}_{$timestamp}_{$hash}.{$extension}";
+
+            // Path folder dan file
+            $folderPath = 'uploads/crew_and_cast'; // Nama folder di storage
+            $filePath = $folderPath . '/' . $fileName;
+
+            // Pastikan folder ada, jika tidak, buat otomatis
+            if (!Storage::disk('public')->exists($folderPath)) {
+                Storage::disk('public')->makeDirectory($folderPath);
+            }
+
+            // Simpan file ke storage
+            Storage::disk('public')->put($filePath, file_get_contents($file));
+
+            // URL absolut
+            $imageUrl = url('storage/' . $filePath);
+
+            // Masukkan URL gambar baru ke validated data
+            $validated['image'] = $imageUrl;
+        } elseif ($request->input('image') && $request->input('image') === $crewAndCast->image) {
+            // Jika image adalah URL string dan sama dengan yang ada di database, tidak perlu diubah
+            unset($validated['image']); // Hapus dari validated data agar tidak di-update
+        } elseif ($request->input('image') === null) {
+            // Jika request image adalah null, hapus gambar lama dan file-nya
+            if ($crewAndCast->image) {
+                $relativePath = $this->extractRelativePathFromUrl($crewAndCast->image);
+                Storage::disk('public')->delete($relativePath);
+            }
+            $validated['image'] = null; // Set image menjadi null
+        }
+
+        // Update data di database
         $crewAndCast->update($validated);
-        return response()->json($crewAndCast);
+
+        // Kembalikan respons JSON
+        return response()->json($request->input('image'));
     }
 
     /**
@@ -169,9 +217,34 @@ class CrewAndCastController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        // Temukan entitas CrewAndCast berdasarkan ID
         $crewAndCast = CrewAndCast::findOrFail($id);
+
+        // Periksa apakah ada path file gambar yang tersimpan
+        if ($crewAndCast->image) {
+            // Ekstrak path relatif dari URL
+            $relativePath = $this->extractRelativePathFromUrl($crewAndCast->image);
+
+            // Hapus file gambar dari storage
+            Storage::disk('public')->delete($relativePath);
+        }
+
+
+        // Hapus entitas dari database
         $crewAndCast->delete();
+
+        // Kembalikan respons JSON
         return response()->json(['message' => 'Crew/Cast deleted successfully']);
+    }
+
+
+    /**
+     * Extract relative path from full URL for stored image.
+     */
+    private function extractRelativePathFromUrl($url)
+    {
+        // Contoh URL: http://localhost:8000/storage/uploads/crew_and_cast/foufo_coba-nich_1751349423.png
+        $baseUrl = url('storage'); // http://localhost:8000/storage
+        return str_replace($baseUrl . '/', '', $url); // Menghasilkan uploads/crew_and_cast/foufo_coba-nich_1751349423.png
     }
 }
