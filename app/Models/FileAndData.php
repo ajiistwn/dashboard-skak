@@ -14,4 +14,14 @@ class FileAndData extends Model
     protected $casts = [
         'access' => 'array',
     ];
+
+    public function categoryDocument()
+    {
+        return $this->belongsTo('App\Models\CategoryDocument', 'category_documents_id');
+    }
+
+    public function project()
+    {
+        return $this->belongsTo('App\Models\Project', 'project_id');
+    }
 }
