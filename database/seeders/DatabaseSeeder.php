@@ -29,6 +29,8 @@ class DatabaseSeeder extends Seeder
             FileAndDataSeeder::class,
             AgendaSeeder::class,
             CrewAndCastSeeder::class,
+            ProgressProjectSeeder::class,
+            TaskProgressProjectSeeder::class,
             // Add other seeders here
         ]);
     }
