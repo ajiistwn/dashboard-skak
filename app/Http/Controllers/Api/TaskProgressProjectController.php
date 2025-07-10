@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\TaskProgressProject; // Assuming this is the model for the task progress project
 use App\Models\ProgressProject; // Assuming this is the model for progress projects
+use App\Models\Project;
 
 class TaskProgressProjectController extends Controller
 {
@@ -87,12 +88,17 @@ class TaskProgressProjectController extends Controller
             'name' => 'required|string|max:255',
             'project_id' => 'nullable|exists:category_documents,id',
             'progress_project_id' => 'nullable|exists:progress_projects,id',
-            'status' => 'nullable|in:start,finish',
+            'status' => 'nullable|in:start,finish, holdOn',
             'start_time' => 'nullable|date',
             'finish_time' => 'nullable|date',
         ]);
 
         $task = TaskProgressProject::create($validated);
+        // Update the project progress percentages after creating a new task
+        if (isset($validated['project_id'])) {
+            $this->countPercentageAll($validated['project_id']);
+        }
+
         return response()->json($validated);
     }
 
@@ -118,12 +124,17 @@ class TaskProgressProjectController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'project_id' => 'nullable|exists:category_documents,id',
             'progress_project_id' => 'nullable|exists:progress_projects,id',
-            'status' => 'nullable|in:start,finish',
+            'status' => 'nullable|in:start,finish, holdOn',
             'start_time' => 'nullable|date',
             'finish_time' => 'nullable|date',
         ]);
 
         $task->update($validated);
+        // Update the project progress percentages after updating a task
+        if (isset($validated['project_id'])) {
+            $this->countPercentageAll($validated['project_id']);
+        }
+
         return response()->json($validated);
     }
 
@@ -136,6 +147,49 @@ class TaskProgressProjectController extends Controller
         $task = TaskProgressProject::findOrFail($id);
         $task->delete();
         return response()->json(['message' => 'Task deleted successfully']);
+    }
+
+    private function countPercentageAll(int $projectId)
+    {
+        $tasks = TaskProgressProject::where('project_id', $projectId)->get();
+
+        $project = Project::findOrFail($projectId);
+
+        $developmentTasks = $tasks->where('progress_project_id', 1);
+        $totalDevelopmentTasks = $developmentTasks->count();
+        $finishedDevelopmentTasks = $developmentTasks->where('status', 'finish')->count();
+        $developmentPercentage = ($totalDevelopmentTasks > 0) ? ($finishedDevelopmentTasks / $totalDevelopmentTasks) * 100 : 0;
+
+        $preProductionTasks = $tasks->where('progress_project_id', 2);
+        $totalPreProductionTasks = $preProductionTasks->count();
+        $finishedPreProductionTasks = $preProductionTasks->where('status', 'finish')->count();
+        $preProductionPercentage = ($totalPreProductionTasks > 0) ? ($finishedPreProductionTasks / $totalPreProductionTasks) * 100 : 0;
+
+        $productionTasks = $tasks->where('progress_project_id', 3);
+        $totalProductionTasks = $productionTasks->count();
+        $finishedProductionTasks = $productionTasks->where('status', 'finish')->count();
+        $productionPercentage = ($totalProductionTasks > 0) ? ($finishedProductionTasks / $totalProductionTasks) * 100 : 0;
+
+        $postProductionTasks = $tasks->where('progress_project_id', 4);
+        $totalPostProductionTasks = $postProductionTasks->count();
+        $finishedPostProductionTasks = $postProductionTasks->where('status', 'finish')->count();
+        $postProductionPercentage = ($totalPostProductionTasks > 0) ? ($finishedPostProductionTasks / $totalPostProductionTasks) * 100 : 0;
+
+        $promoTasks = $tasks->where('progress_project_id', 5);
+        $totalPromoTasks = $promoTasks->count();
+        $finishedPromoTasks = $promoTasks->where('status', 'finish')->count();
+        $promoPercentage = ($totalPromoTasks > 0) ? ($finishedPromoTasks / $totalPromoTasks) * 100 : 0;
+
+        $project->update([
+            'development' => $developmentPercentage,
+            'pre_production' => $preProductionPercentage,
+            'production' => $productionPercentage,
+            'post_production' => $postProductionPercentage,
+            'promo' => $promoPercentage,
+        ]);
+
+
+        return response()->json("oke");
     }
 
 

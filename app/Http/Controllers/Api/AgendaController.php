@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Agenda;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AgendaController extends Controller
 {
@@ -62,6 +64,14 @@ class AgendaController extends Controller
 
         $agendas = $agendas->get();
 
+        // Decode kolom images dari JSON ke array
+        $agendas = $agendas->map(function ($agenda) {
+            if ($agenda->images) {
+                $agenda->images = json_decode($agenda->images, true); // Ubah ke array
+            }
+            return $agenda;
+        });
+
         // Step 1: Group & Sort by Year DESC
         $groupedYears = $agendas->groupBy(function ($item) {
             return \Carbon\Carbon::parse($item->date)->format('Y');
@@ -111,6 +121,58 @@ class AgendaController extends Controller
             return response()->json(['message' => 'Resource not found'], 404);
         }
 
+        // Decode kolom images jika masih dalam format string JSON
+        if (is_string($agenda->images)) {
+            $agenda->images = json_decode($agenda->images, true);
+        }
+
+        return response()->json($agenda);
+    }
+
+    /**
+     * Store the specified resource in storage.
+     */
+    public function store(Request $request)
+    {
+        // Validasi input
+        $validated = $request->validate([
+            'description' => 'required|string|max:255',
+            'date' => 'required|date',
+            'project_id' => 'nullable|exists:projects,id',
+            'location' => 'nullable|string|max:255',
+            'agenda_type' => 'required|in:schedule,meeting',
+            'category_documents_id' => 'nullable|exists:category_documents,id',
+            'duration' => 'nullable|string|max:50',
+            'meet_type' => 'nullable|in:offline,online',
+            'notes' => 'nullable|string',
+            'project_link' => 'nullable|url',
+            'file_support' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
+            'images' => 'nullable|array',
+            'images.*' => 'file|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        // Simpan data ke database
+        $agenda = new Agenda();
+        $agenda->fill($validated);
+
+        // Handle file_support upload
+        if ($request->hasFile('file_support')) {
+            $fileSupportPath = $this->handleFileUpload($request->file('file_support'), 'file', $validated['project_id'], $validated['description']);
+            $agenda->file_support = $fileSupportPath;
+        }
+
+        // Handle images upload
+        if ($request->hasFile('images')) {
+            $imagePaths = [];
+            foreach ($request->file('images') as $image) {
+                $imagePath = $this->handleFileUpload($image, 'image', $validated['project_id'], $validated['description']);
+                $imagePaths[] = $imagePath;
+            }
+            $agenda->images = json_encode($imagePaths); // Simpan sebagai JSON
+        }
+
+        $agenda->save();
+
         return response()->json($agenda);
     }
 
@@ -126,7 +188,7 @@ class AgendaController extends Controller
         }
 
         // Validasi input
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'description' => 'sometimes|required|string|max:255',
             'date' => 'sometimes|required|date',
             'project_id' => 'nullable|exists:projects,id',
@@ -137,17 +199,56 @@ class AgendaController extends Controller
             'meet_type' => 'nullable|in:offline,online',
             'notes' => 'nullable|string',
             'project_link' => 'nullable|url',
-            'file_support' => 'nullable|string|max:255',
-            'images' => 'nullable|array', // JSON field
-            'access' => 'sometimes|required|array', // JSON field
+            'file_support' => 'nullable',
+            'images' => 'nullable|array',
+            'images.*' => 'file|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        // Handle file_support upload
+        if ($request->hasFile('file_support')) {
+            if ($agenda->file_support) {
+                $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
+                Storage::disk('public')->delete($relativePath);
+            }
+            $fileSupportPath = $this->handleFileUpload($request->file('file_support'), 'file', $validated['project_id'], $validated['description']);
+            $agenda->file_support = $fileSupportPath;
+        } elseif ($request->input('file_support') === null) {
+            if ($agenda->file_support) {
+                $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
+                Storage::disk('public')->delete($relativePath);
+            }
+            $agenda->file_support = null;
         }
 
-        // Update data
-        $agenda->update($request->all());
+        // Handle images upload
+        if ($request->hasFile('images')) {
+            if ($agenda->images) {
+                $existingImages = json_decode($agenda->images, true);
+                foreach ($existingImages as $image) {
+                    $relativePath = $this->extractRelativePathFromUrl($image);
+                    Storage::disk('public')->delete($relativePath);
+                }
+            }
+
+            $imagePaths = [];
+            foreach ($request->file('images') as $image) {
+                $imagePath = $this->handleFileUpload($image, 'image', $validated['project_id'], $validated['description']);
+                $imagePaths[] = $imagePath;
+            }
+            $agenda->images = json_encode($imagePaths);
+        } elseif ($request->input('images') === null) {
+            if ($agenda->images) {
+                $existingImages = json_decode($agenda->images, true);
+                foreach ($existingImages as $image) {
+                    $relativePath = $this->extractRelativePathFromUrl($image);
+                    Storage::disk('public')->delete($relativePath);
+                }
+            }
+            $agenda->images = null;
+        }
+
+        // Update data di database
+        $agenda->update($validated);
 
         return response()->json($agenda);
     }
@@ -162,8 +263,57 @@ class AgendaController extends Controller
             return response()->json(['message' => 'Resource not found'], 404);
         }
 
+        // Hapus file_support dari storage
+        if ($agenda->file_support) {
+            $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
+            Storage::disk('public')->delete($relativePath);
+        }
+
+        // Hapus images dari storage
+        if ($agenda->images) {
+            $existingImages = json_decode($agenda->images, true);
+            foreach ($existingImages as $image) {
+                $relativePath = $this->extractRelativePathFromUrl($image);
+                Storage::disk('public')->delete($relativePath);
+            }
+        }
+
+        // Hapus data dari database
         $agenda->delete();
 
         return response()->json(['message' => 'Resource deleted successfully']);
+    }
+        /**
+     * Handle file upload with standardized naming and storage.
+     */
+    private function handleFileUpload($file, $fieldName, $projectId, $description)
+    {
+        $projectName = $projectId ? \App\Models\Project::find($projectId)->name : 'no_project';
+        $projectSlug = Str::slug($projectName, '-');
+        $fileNameSlug = Str::slug($description, '-');
+        $timestamp = time();
+        $hash = substr(md5($file->getClientOriginalName()), 0, 6);
+        $extension = $file->getClientOriginalExtension();
+
+        $fileName = "{$projectSlug}_{$fieldName}_{$fileNameSlug}_{$timestamp}_{$hash}.{$extension}";
+        $folderPath = 'uploads/agenda';
+
+        if (!Storage::disk('public')->exists($folderPath)) {
+            Storage::disk('public')->makeDirectory($folderPath);
+        }
+
+        $filePath = $folderPath . '/' . $fileName;
+        Storage::disk('public')->put($filePath, file_get_contents($file));
+
+        return url('storage/' . $filePath);
+    }
+
+    /**
+     * Extract relative path from full URL for stored files.
+     */
+    private function extractRelativePathFromUrl($url)
+    {
+        $baseUrl = url('storage');
+        return str_replace($baseUrl . '/', '', $url);
     }
 }

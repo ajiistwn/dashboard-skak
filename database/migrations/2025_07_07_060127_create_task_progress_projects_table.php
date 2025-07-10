@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name'); // Nama task
             $table->foreignId('project_id')->nullable()->constrained('category_documents')->nullOnDelete();
             $table->foreignId('progress_project_id')->nullable()->constrained('progress_projects')->nullOnDelete();
-            $table->enum('status', ['start', 'finish'])->default('start'); // Status task
+            $table->enum('status', ['holdOn','start', 'finish'])->default('start'); // Status task
             $table->timestamp('start_time')->nullable(); // Waktu mulai task
             $table->timestamp('finish_time')->nullable(); // Waktu selesai task
             $table->timestamps(); // Kolom created_at dan updated_at
