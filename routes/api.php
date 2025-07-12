@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\FileAndDataController;
 use App\Http\Controllers\Api\AgendaController;
 use App\Http\Controllers\Api\TaskProgressProjectController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\FileController;
 
 
 // Route::get('/user', function (Request $request) {
@@ -25,5 +26,7 @@ Route::apiResource('file-and-data', FileAndDataController::class);
 Route::apiResource('agenda', AgendaController::class);
 Route::apiResource('task-progress-project', TaskProgressProjectController::class);
 Route::apiResource('project', ProjectController::class);
+Route::get('get-file/{url}', [FileController::class, 'getFile'])
+    ->name('file.get-file');
 
 

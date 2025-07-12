@@ -148,7 +148,7 @@ class AgendaController extends Controller
             'project_link' => 'nullable|url',
             'file_support' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240',
             'images' => 'nullable|array',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'file|mimes:jpeg,png,jpg,gif',
         ]);
 
         // Simpan data ke database
@@ -182,18 +182,20 @@ class AgendaController extends Controller
     public function update(Request $request, $id)
     {
         $agenda = Agenda::find($id);
-
         if (!$agenda) {
             return response()->json(['message' => 'Resource not found'], 404);
         }
 
-        // Validasi input
+        if($request->input('imagesPreview')){
+            $imagesPreview = json_decode($request->input('imagesPreview'));
+        }
+        // // Validasi input
         $validated = $request->validate([
-            'description' => 'sometimes|required|string|max:255',
-            'date' => 'sometimes|required|date',
+            'description' => 'required|string|max:255',
+            'date' => 'required|date',
             'project_id' => 'nullable|exists:projects,id',
             'location' => 'nullable|string|max:255',
-            'agenda_type' => 'sometimes|required|in:schedule,meeting',
+            'agenda_type' => 'required|in:schedule,meeting',
             'category_documents_id' => 'nullable|exists:category_documents,id',
             'duration' => 'nullable|string|max:50',
             'meet_type' => 'nullable|in:offline,online',
@@ -201,56 +203,76 @@ class AgendaController extends Controller
             'project_link' => 'nullable|url',
             'file_support' => 'nullable',
             'images' => 'nullable|array',
-            'images.*' => 'file|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Handle file_support upload
-        if ($request->hasFile('file_support')) {
-            if ($agenda->file_support) {
-                $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
-                Storage::disk('public')->delete($relativePath);
-            }
-            $fileSupportPath = $this->handleFileUpload($request->file('file_support'), 'file', $validated['project_id'], $validated['description']);
-            $agenda->file_support = $fileSupportPath;
-        } elseif ($request->input('file_support') === null) {
-            if ($agenda->file_support) {
-                $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
-                Storage::disk('public')->delete($relativePath);
-            }
-            $agenda->file_support = null;
-        }
+        // Bandingkan gambar dari database dengan imagesPreview
+        if ($agenda->images) {
+            $existingImages = json_decode($agenda->images, true);
 
-        // Handle images upload
-        if ($request->hasFile('images')) {
-            if ($agenda->images) {
-                $existingImages = json_decode($agenda->images, true);
-                foreach ($existingImages as $image) {
+            // Filter existingImages: Hanya simpan URL yang ada di imagesPreview
+            $filteredImages = array_filter($existingImages, function ($image) use ($imagesPreview) {
+                if (!in_array($image, $imagesPreview)) {
+                    // Jika gambar tidak ada di imagesPreview, hapus dari storage
                     $relativePath = $this->extractRelativePathFromUrl($image);
                     Storage::disk('public')->delete($relativePath);
+                    return false; // Hapus dari array
                 }
-            }
+                return true; // Tetap simpan di array
+            });
 
+            // Update existingImages dengan hasil filter
+            $existingImages = array_values($filteredImages); // Reset index array
+        }
+
+        // //Handle file_support logic
+        if ($request->hasFile('file_support')) {
+            // Ada file baru di-upload
+            $newFileName = $request->file('file_support')->getClientOriginalName(); // Ambil nama file baru
+            // Ekstrak nama file dari URL di database
+            $oldFileName = basename($agenda->file_support); // Ambil hanya nama file dari URL
+            if ($newFileName !== $oldFileName) {
+                // Jika nama file baru berbeda dari nama file lama
+                if ($agenda->file_support) {
+                    // Hapus file lama dari storage
+                    $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
+                    Storage::disk('public')->delete($relativePath);
+                }
+                // Simpan file baru
+                $fileSupportPath = $this->handleFileUpload($request->file('file_support'), 'file', $validated['project_id'], $validated['description']);
+                $validated['file_support'] = $fileSupportPath;
+            }
+            // Jika nama file baru sama dengan nama file lama, tidak perlu melakukan apa pun
+        } elseif ($request->input('file_support') === null || $request->input('file_support') === "") {
+            // Jika file_support kosong (null)
+            if ($agenda->file_support) {
+                // Hapus file lama dari storage
+                $relativePath = $this->extractRelativePathFromUrl($agenda->file_support);
+                Storage::disk('public')->delete($relativePath);
+            }
+            // Set file_support menjadi null
+            $validated['file_support'] = null;
+        }
+
+
+        // // Handle images upload
+        $newImages = [];
+        if ($request->hasFile('images')) {
+            // Upload gambar-gambar baru
             $imagePaths = [];
             foreach ($request->file('images') as $image) {
                 $imagePath = $this->handleFileUpload($image, 'image', $validated['project_id'], $validated['description']);
                 $imagePaths[] = $imagePath;
             }
-            $agenda->images = json_encode($imagePaths);
-        } elseif ($request->input('images') === null) {
-            if ($agenda->images) {
-                $existingImages = json_decode($agenda->images, true);
-                foreach ($existingImages as $image) {
-                    $relativePath = $this->extractRelativePathFromUrl($image);
-                    Storage::disk('public')->delete($relativePath);
-                }
-            }
-            $agenda->images = null;
+            $newImages = $imagePaths;
         }
+
+        $updatedImages = array_merge($imagesPreview ?? [], $newImages ?: []);
+        $validated['images'] = $updatedImages;
 
         // Update data di database
         $agenda->update($validated);
 
-        return response()->json($agenda);
+        return response()->json($agenda->images);
     }
     /**
      * Remove the specified resource from storage.
